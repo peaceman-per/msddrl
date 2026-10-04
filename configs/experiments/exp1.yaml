@@ -1,0 +1,20 @@
+# exp 1: does narrowing tabrep's trunk from {1024,2048,2048} to
+# {1024,1024,1024} cost generative quality?
+experiment: 1
+defaults:
+  # the target is in the input here and only here, because exp 1 measures
+  # generative quality of the full joint so the model has to generate it
+  target_in_input: true
+  eval:
+    kind: generate
+axes:
+  dataset: [adult, higgs-small]
+  arch: [legacy, reduced]
+  pred: [x, eps, v]
+  # 4 seeds for error bars. variance from the sampler is tiny (max sd 0.0032
+  # over 10 draws), so the seeds measure training variance
+  seed: [1, 2, 3, 4]
+constraints:
+  # each pred mode takes the loss in its own space
+  loss: same_as_pred
+# 2 datasets x 2 architectures x 3 pred modes x 4 seeds = 48 cells

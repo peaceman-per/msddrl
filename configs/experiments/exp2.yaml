@@ -1,0 +1,21 @@
+# exp 2: loss space and prediction space vs representation quality.
+# nine (pred, loss) combinations per dataset, each probed over the 12x12
+# (t_true, t_label) grid.
+#
+# run on all eight datasets, so the settings picked here dont have to be
+# carried over to datasets they were not tuned on.
+experiment: 2
+defaults:
+  bottleneck: 512
+  trunk: [1024, 1024, 1024]
+  seed: 1
+  target_in_input: false
+  eval:
+    kind: probe_grid
+    score_split: val
+    grid: interpolant   # all pairs of the 12 values, 144 points
+axes:
+  dataset: [california, house, king, beijing, default, adult, higgs-small, miniboone]
+  pred: [x, eps, v]
+  loss: [x, eps, v]
+# 8 datasets x 3 pred x 3 loss = 72 cells, 144 probe rows each

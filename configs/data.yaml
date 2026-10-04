@@ -1,0 +1,89 @@
+# data preparation constants
+
+raw_root: data/raw
+processed_root: data/processed
+
+split:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+  seed: 128
+  # stratified on the target for classification, not for regression
+
+preprocessing:
+  # quantile transform to a normal distribution, same as tabrep / tabsyn
+  numeric: quantile
+  quantile_output_distribution: normal
+  quantile_subsample: 1000000000
+  # numeric nans are mean imputed, missing categoricals are kept as their
+  # own category. both fitted on the train split only
+  numeric_nan: mean
+  categorical_nan: keep
+  # regression targets are standardised for the model input only, probes
+  # are scored in the dataset's own units
+  target_scaling: standard
+
+# rotating evaluation folds, exp 4 only. the regression targets are heavy
+# tailed, so the se on mse from one 15% test split is large (4.5% relative on
+# house). splitting train + test into k blocks and scoring every row once
+# means 85% of the rows get scored instead of 15%, which tightens the se by
+# sqrt(85/15) = 2.4x.
+#
+# the validation split is left out of every fold and never scored, because
+# exp 2 used it to pick the settings.
+#
+# each fold refits the quantile transformer, categorical vocabularies and
+# target scaler on its own training rows.
+evaluation_folds:
+  k: 5
+  seed: 128
+  datasets: [california, house, king, beijing]
+
+# intrinsic dimension estimation. danco is only kept for reporting: the
+# scikit-dimension version tops out at about 12 (it returns 12.0 on synthetic
+# manifolds of dimension 15 and 20), so it is not used for d_hat_max
+intrinsic_dimension:
+  estimators: [two_nn, levina_bickel]
+  report_only: [danco]
+  levina_bickel_k: [10, 20]
+  subsample: 20000
+  seed: 128
+  smoke_rows: 500
+
+datasets:
+  # tabrep / tabsyn datasets: raw csv or xls plus info.json
+  adult:
+    source: tabrep
+    task: binclass
+    # comes as a train/test pair, joined before the 70/15/15 split so the
+    # frame is the full 48,842 rows
+    files: [adult.data, adult.test]
+    header: null
+    # missing values are "?". rows are not dropped, they become nan
+    missing_policy: mark
+    na_token: "?"
+  default:
+    source: tabrep
+    task: binclass
+    files: ["default of credit card clients.xls"]
+    file_type: xls
+    excel_header_row: 1
+    drop_columns: [ID]
+    missing_policy: mark
+    na_token: "?"
+  beijing:
+    source: tabrep
+    task: regression
+    files: [PRSA_data_2010.1.1-2014.12.31.csv]
+    header: infer
+    # drop the index column, then dropna on the whole frame before the
+    # split. the only tabrep dataset that drops rows
+    drop_first_column: true
+    missing_policy: dropna
+
+  # tabddpm datasets: npy arrays, no column names
+  higgs-small: {source: tabddpm, task: binclass}
+  miniboone: {source: tabddpm, task: binclass}
+  california: {source: tabddpm, task: regression}
+  house: {source: tabddpm, task: regression}
+  king: {source: tabddpm, task: regression}

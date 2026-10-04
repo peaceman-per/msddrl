@@ -1,0 +1,65 @@
+# exp 3: bottleneck width.
+# does x-prediction survive a bottleneck below the ambient dimension where
+# eps and v prediction fail?
+experiment: 3
+defaults:
+  trunk: [1024, 1024, 1024]
+  seed: 1
+  target_in_input: false
+  # no cap on the number of training rows
+  subsample_train: null
+  eval:
+    kind: probe_point
+    score_split: val
+    # the naive (t_true, t_label) pair. anything that keeps everything but
+    # the bottleneck fixed would do
+    point: [1.0, 0.95]
+blocks:
+  # the original experiment, losses in their own space (69 cells)
+  - axes:
+      # adult is here because the question is about widths below the ambient
+      # dimension. d_in is 50 for miniboone and 32 for default, so most of
+      # the widths are not really bottlenecks there, and default is only ~4
+      # points above its majority class rate. adult has d_in 22 and ~10
+      # points of headroom, so {16,8,4,2} are all below ambient
+      dataset: [default, miniboone, adult]
+      pred: [x, eps, v]
+      bottleneck: [512, 256, 128, 64, 32, 16, 8, 4, 2]
+    constraints:
+      loss: same_as_pred
+      # 4 and 2 only on adult
+      skip:
+        - {dataset: [default, miniboone], bottleneck: [4, 2]}
+
+  # the full (pred, loss) 3x3 on adult and miniboone, so the prediction
+  # target can be moved with the loss held fixed. two widths well above the
+  # ambient dimension, then four around each dataset's intrinsic dimension
+  # (adult 4.5, miniboone 18.0). the matched-loss cells overlap the block
+  # above and are the same cells. the 512 cells reuse the exp 2 checkpoints
+  - axes:
+      dataset: [adult]
+      pred: [x, eps, v]
+      loss: [x, eps, v]
+      bottleneck: [512, 128, 16, 8, 4, 2]
+  - axes:
+      dataset: [miniboone]
+      pred: [x, eps, v]
+      loss: [x, eps, v]
+      bottleneck: [512, 128, 32, 16, 8, 4]
+
+  # seeds 2 and 3 of the 3x3. on seed 1 the loss axis was not negligible
+  # (49 of 108 paired differences > 3 se), so it is repeated. the 512 x/x
+  # and v/v cells reuse the exp 4 checkpoints. run seed 2 before seed 3
+  # (run_queue.py --seeds 2, then --seeds 3)
+  - axes:
+      dataset: [adult]
+      pred: [x, eps, v]
+      loss: [x, eps, v]
+      bottleneck: [512, 128, 16, 8, 4, 2]
+      seed: [2, 3]
+  - axes:
+      dataset: [miniboone]
+      pred: [x, eps, v]
+      loss: [x, eps, v]
+      bottleneck: [512, 128, 32, 16, 8, 4]
+      seed: [2, 3]

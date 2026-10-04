@@ -1,0 +1,41 @@
+# training constants, same for every cell
+
+budget:
+  # epochs not iterations, so every dataset gets the same number of passes
+  # over its own rows. one epoch is one shuffled pass in batches of
+  # batch_size with the leftover rows dropped
+  epochs: 15000
+  batch_size: 4096
+  drop_last: true
+  eval_every: 150        # 100 evaluations per run
+  # no early stopping: the three loss spaces are not comparable so the
+  # budget is fixed to give them equal exposure
+
+optimizer:
+  # adamw, same as the tabrep code (the tabrep paper says adam)
+  name: adamw
+  lr: 1.0e-4
+  weight_decay: 5.0e-4
+  # flat learning rate, no schedule, ema or warmup
+  schedule: null
+  grad_clip: null
+
+validation:
+  # validation loss over the full val split at each fixed t, in the cell's
+  # own loss space
+  t_grid: [0.1, 0.3, 0.5, 0.7, 0.9]
+  # eps is drawn fresh per evaluation from a generator seeded by
+  # (seed, epoch), so a resumed run matches an uninterrupted one
+  eps_seed_base: 1000
+
+instrumentation:
+  # per-batch loss max/median and gradient norm, aggregated over each
+  # evaluation interval. diagnostic only, not used for any reported number
+  enabled: true
+
+smoke:
+  epochs: 2
+  eval_every: 1
+  train_rows: 2048
+  val_rows: 512
+  test_rows: 512

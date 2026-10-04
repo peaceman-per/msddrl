@@ -1,0 +1,46 @@
+# model, interpolant and sampler constants
+
+interpolant:
+  # z_t = t*x + (1-t)*eps, so t=1 is clean data and t=0 is pure noise.
+  # training draws t ~ U(delta, 1-delta) in every cell
+  delta: 1.0e-3
+
+  # the (t_true, t_label) grid: the clean point sigma=0 plus eleven geometric
+  # points sigma_k = sigma_base * 2^(k/2), k = 0..10, mapped through
+  # t = 1/(1+sigma). 12 values, so 144 pairs
+  grid:
+    sigma_base: 0.03
+    n_geometric: 11
+
+architecture:
+  # hidden = trunk + [bottleneck]. the bottleneck is the 4th and last hidden
+  # layer and is where the representation is taken from
+  trunk: [1024, 1024, 1024]
+  bottleneck: 512
+  activation: relu
+  dropout: 0.0
+  # width of the input projection and the time embedding added to it.
+  # null means use trunk[0], which is 1024 like tabrep for every real config
+  dim_t: null
+  time_embedding:
+    # same as tabrep: sinusoidal frequencies -> Linear, SiLU, Linear, added
+    # to the output of the input projection
+    max_period: 10000
+    mlp: true
+
+  variants:
+    # exp 1 compares these two trunks at a fixed bottleneck
+    legacy: {trunk: [1024, 2048, 2048], bottleneck: 1024}
+    reduced: {trunk: [1024, 1024, 1024], bottleneck: 1024}
+
+sampler:
+  # exp 1 only. probability-flow ode dz/dt = v_theta(z, t), euler steps
+  # uniform in t from delta to 1-delta, starting from eps ~ N(0, I)
+  steps: 50
+  batch_size: 10000
+
+smoke:
+  trunk: [64, 64, 64]
+  bottlenecks: [16, 8]
+  sampler_steps: 5
+  sampler_rows: 512
